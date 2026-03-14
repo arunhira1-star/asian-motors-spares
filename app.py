@@ -3,58 +3,43 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
+ADMIN_PASSWORD = "asian123"
+
 products = [
-{"name":"Jeep Headlight","part":"68214344AA","brand":"Jeep","model":"Compass","price":"7500","stock":"5"},
-{"name":"Jeep Brake Pad","part":"68192451AB","brand":"Jeep","model":"Compass","price":"3200","stock":"10"},
-{"name":"Fiat Air Filter","part":"51977574","brand":"Fiat","model":"Punto","price":"900","stock":"15"},
-{"name":"Fiat Oil Filter","part":"55224598","brand":"Fiat","model":"Linea","price":"650","stock":"20"},
+{"name":"Jeep Headlight","part":"68214344AA","price":"7500","stock":"5"},
+{"name":"Jeep Brake Pad","part":"68192451AB","price":"3200","stock":"10"},
+{"name":"Fiat Air Filter","part":"51977574","price":"900","stock":"15"}
 ]
 
-cart = []
-orders = []
+requests=[]
+
+cart=[]
+
 
 @app.route("/")
 def store():
 
-    search = request.args.get("search","")
-    brand = request.args.get("brand","")
-    model = request.args.get("model","")
+    search=request.args.get("search","")
 
-    html = """
+    html="""
 
     <h1>🚗 Asian Motors Spares</h1>
 
-    <a href="/admin">Admin Panel</a> |
-    <a href="/dashboard">Sales Dashboard</a> |
-    <a href="/cart">Cart</a>
+    <a href="/cart">Cart</a> |
+    <a href="/upload">Upload Part Photo</a> |
+    <a href="/login">Admin</a>
 
     <br><br>
 
     <form>
 
-    Search Part Number <br>
-    <input name="search"><br><br>
-
-    Brand <br>
-    <select name="brand">
-    <option value="">All</option>
-    <option>Jeep</option>
-    <option>Fiat</option>
-    </select><br><br>
-
-    Model <br>
-    <select name="model">
-    <option value="">All</option>
-    <option>Compass</option>
-    <option>Punto</option>
-    <option>Linea</option>
-    </select><br><br>
+    <input name="search" placeholder="Search Part Number">
 
     <button>Search</button>
 
     </form>
 
-    <h2>Spare Parts Catalogue</h2>
+    <h2>Parts Catalogue</h2>
 
     """
 
@@ -63,35 +48,21 @@ def store():
         if search and search not in p["part"]:
             continue
 
-        if brand and brand != p["brand"]:
-            continue
+        html+=f"""
 
-        if model and model != p["model"]:
-            continue
-
-        html += f"""
-
-        <div style="border:1px solid #ddd;padding:10px;margin:10px;">
+        <div style="border:1px solid #ddd;padding:10px;margin:10px">
 
         <h3>{p['name']}</h3>
 
-        <p>Brand: {p['brand']}</p>
-
-        <p>Model: {p['model']}</p>
-
-        <p>Part Number: {p['part']}</p>
+        <p>Part No: {p['part']}</p>
 
         <p>Price: ₹{p['price']}</p>
-
-        <p>Stock: {p['stock']}</p>
 
         <a href="/add/{p['part']}">Add to Cart</a>
 
         </div>
 
         """
-
-    html += "<p>📞 Contact: 9864126916</p>"
 
     return html
 
@@ -100,7 +71,7 @@ def store():
 def add(part):
 
     for p in products:
-        if p["part"] == part:
+        if p["part"]==part:
             cart.append(p)
 
     return "Added to cart <br><a href='/'>Back</a>"
@@ -109,125 +80,123 @@ def add(part):
 @app.route("/cart")
 def cart_page():
 
-    html = "<h1>🛒 Cart</h1>"
-
-    total = 0
+    total=0
+    html="<h1>Cart</h1>"
 
     for c in cart:
-        html += f"{c['name']} - ₹{c['price']}<br>"
-        total += int(c["price"])
 
-    html += f"<h3>Total: ₹{total}</h3>"
+        html+=f"{c['name']} ₹{c['price']}<br>"
+        total+=int(c["price"])
 
-    html += "<a href='/checkout'>Checkout</a>"
+    html+=f"<h3>Total ₹{total}</h3>"
+
+    html+=f"""
+
+    <a href="upi://pay?pa=9864126916@upi&pn=AsianMotorsSpares&am={total}&cu=INR">
+
+    Pay with UPI
+
+    </a>
+
+    """
 
     return html
 
 
-@app.route("/checkout")
-def checkout():
+@app.route("/upload",methods=["GET","POST"])
+def upload():
 
-    total = 0
+    if request.method=="POST":
 
-    for c in cart:
-        total += int(c["price"])
+        requests.append({
 
-    return f"""
-
-    <h1>UPI Payment</h1>
-
-    <p>Total Amount: ₹{total}</p>
-
-    <a href="upi://pay?pa=9864126916@upi&pn=AsianMotorsSpares&am={total}&cu=INR">
-
-    <button style="padding:10px;font-size:18px;">Pay with UPI</button>
-
-    </a>
-
-    <br><br>
-
-    <a href="/">Back</a>
-
-    """
-
-
-@app.route("/admin", methods=["GET","POST"])
-def admin():
-
-    if request.method == "POST":
-
-        name = request.form["name"]
-        part = request.form["part"]
-        brand = request.form["brand"]
-        model = request.form["model"]
-        price = request.form["price"]
-        stock = request.form["stock"]
-
-        products.append({
-
-        "name":name,
-        "part":part,
-        "brand":brand,
-        "model":model,
-        "price":price,
-        "stock":stock
+        "name":request.form["name"],
+        "phone":request.form["phone"],
+        "part":request.form["part"],
+        "image":request.form["image"]
 
         })
 
+        return "Request sent for verification"
+
     return """
 
-    <h1>👨‍💼 Admin Panel</h1>
+    <h2>Upload Part Photo</h2>
 
     <form method="post">
 
-    Product Name <br>
+    Your Name<br>
     <input name="name"><br>
 
-    Part Number <br>
+    Phone<br>
+    <input name="phone"><br>
+
+    Part Number<br>
     <input name="part"><br>
 
-    Brand <br>
-    <input name="brand"><br>
+    Image URL<br>
+    <input name="image"><br><br>
 
-    Model <br>
-    <input name="model"><br>
-
-    Price <br>
-    <input name="price"><br>
-
-    Stock <br>
-    <input name="stock"><br><br>
-
-    <button>Add Product</button>
+    <button>Submit</button>
 
     </form>
 
-    <br>
+    """
 
-    <a href="/">Back to Store</a>
+
+@app.route("/login",methods=["GET","POST"])
+def login():
+
+    if request.method=="POST":
+
+        if request.form["password"]==ADMIN_PASSWORD:
+            return admin()
+
+        else:
+            return "Wrong password"
+
+    return """
+
+    <h2>Admin Login</h2>
+
+    <form method="post">
+
+    Password<br>
+    <input type="password" name="password"><br><br>
+
+    <button>Login</button>
+
+    </form>
 
     """
 
 
-@app.route("/dashboard")
-def dashboard():
+@app.route("/admin")
+def admin():
 
-    return f"""
+    html="<h1>Admin Panel</h1>"
 
-    <h1>📊 Sales Dashboard</h1>
+    html+="<h2>Customer Requests</h2>"
 
-    <p>Total Products: {len(products)}</p>
+    for r in requests:
 
-    <p>Total Orders: {len(orders)}</p>
+        html+=f"""
 
-    <p>Cart Items: {len(cart)}</p>
+        <div style="border:1px solid #ddd;padding:10px;margin:10px">
 
-    <br>
+        Name: {r['name']}<br>
+        Phone: {r['phone']}<br>
+        Part: {r['part']}<br>
+        Image: {r['image']}<br>
 
-    <a href="/">Back</a>
+        </div>
 
-    """
+        """
+
+    html+="<br><a href='/'>Back</a>"
+
+    return html
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+if __name__=="__main__":
+    app.run(host="0.0.0.0",port=10000)
