@@ -318,3 +318,61 @@ Cart Items: {len(cart)}<br>
 
 if __name__=="__main__":
     app.run(host="0.0.0.0",port=10000)
+@app.route("/cart",methods=["GET","POST"])
+def view_cart():
+
+    total=0
+    html="<h1>Cart</h1>"
+
+    for c in cart:
+        html+=f"{c['name']} ₹{c['price']}<br>"
+        total+=int(c["price"])
+
+    if request.method=="POST":
+
+        name=request.form["name"]
+        phone=request.form["phone"]
+        address=request.form["address"]
+
+        orders.append({
+        "name":name,
+        "phone":phone,
+        "address":address,
+        "total":total
+        })
+
+        return "Order placed successfully"
+
+    html+=f"""
+
+<h3>Total ₹{total}</h3>
+
+<h2>Delivery Address</h2>
+
+<form method="post">
+
+Name<br>
+<input name="name"><br><br>
+
+Phone<br>
+<input name="phone"><br><br>
+
+Full Address<br>
+<textarea name="address"></textarea><br><br>
+
+<button>Place Order</button>
+
+</form>
+
+"""
+
+    return html
+    <img src="/logo.png" height="50">
+    <header>
+
+<img src="/logo.png" height="50">
+
+<h2>Asian Motors Spares</h2>
+
+</header>
+    
