@@ -1,185 +1,91 @@
-
 from flask import Flask,request,redirect
 import random
 
 app = Flask(__name__)
 
-# -------------------------
-# ADMIN LOGIN
-# -------------------------
-
 ADMIN_USER="admin"
 ADMIN_PASS="AMS986412"
 
-# -------------------------
-# SAMPLE PARTS DATABASE
-# -------------------------
-
 products=[]
+brands=["Maruti","Hyundai","Tata","Mahindra","Jeep"]
+models=["Swift","Baleno","i20","Nexon","Compass"]
 
-brands={
-"Maruti":["Swift","Baleno","Alto"],
-"Hyundai":["i20","Creta","Verna"],
-"Tata":["Nexon","Harrier","Punch"],
-"Mahindra":["Scorpio","XUV700"],
-"Jeep":["Compass"]
-}
-
-# generate 1000+ demo parts
-for i in range(1,1001):
-
-    brand=random.choice(list(brands.keys()))
-    model=random.choice(brands[brand])
+for i in range(1,301):
 
     products.append({
 
     "id":i,
-    "name":f"{brand} {model} Part {i}",
-    "brand":brand,
-    "model":model,
-    "part":f"OEM{i}XYZ",
-    "price":random.randint(500,5000),
-    "stock":random.randint(1,20),
-    "rating":round(random.uniform(3,5),1)
+    "name":f"Car Spare Part {i}",
+    "brand":random.choice(brands),
+    "model":random.choice(models),
+    "part":f"OEM{i}",
+    "price":random.randint(500,5000)
 
     })
 
 cart=[]
 orders=[]
-reviews=[]
 users=[]
+services=[]
 
-# -------------------------
-# HOME PAGE
-# -------------------------
+theme="light"
+language="English"
+
+# ---------------- STORE ----------------
 
 @app.route("/")
-def home():
+def store():
 
-    brand=request.args.get("brand","")
-    model=request.args.get("model","")
-    search=request.args.get("search","")
+    html=f"""
 
-    html="""
+<h1>🚗 Asian Motors Spares</h1>
 
-<style>
+<a href="/cart">Cart</a> |
+<a href="/login">Customer Login</a> |
+<a href="/settings">Settings</a> |
+<a href="/track">Track Order</a> |
+<a href="/dashboard">Admin</a>
 
-body{font-family:Arial;background:#f1f3f6;margin:0}
-
-header{
-background:#2874f0;
-color:white;
-padding:15px;
-display:flex;
-gap:10px;
-align-items:center
-}
-
-.products{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:20px;
-padding:20px
-}
-
-.card{
-background:white;
-padding:10px;
-border-radius:8px;
-box-shadow:0 0 10px rgba(0,0,0,0.1)
-}
-
-button{
-background:#fb641b;
-color:white;
-border:none;
-padding:8px;
-cursor:pointer
-}
-
-</style>
-
-<header>
-
-<h2>🚗 Asian Motors Spares</h2>
+<br><br>
 
 <form>
 
-<input name="search" placeholder="Part number search">
-
-<select name="brand">
-<option value="">Brand</option>
-<option>Maruti</option>
-<option>Hyundai</option>
-<option>Tata</option>
-<option>Mahindra</option>
-<option>Jeep</option>
-</select>
-
-<select name="model">
-<option value="">Model</option>
-<option>Swift</option>
-<option>Baleno</option>
-<option>i20</option>
-<option>Nexon</option>
-<option>Compass</option>
-</select>
+Search Part
+<input name="search">
 
 <button>Search</button>
 
 </form>
 
-<a href="/cart">Cart</a>
-<a href="/login">Login</a>
-<a href="/admin">Admin</a>
-<a href="/dashboard">Dashboard</a>
-
-</header>
-
-<div class="products">
-
 """
 
+    search=request.args.get("search","")
+
     for p in products:
-
-        if brand and brand!=p["brand"]:
-            continue
-
-        if model and model!=p["model"]:
-            continue
 
         if search and search not in p["part"]:
             continue
 
         html+=f"""
 
-<div class="card">
+<hr>
 
-<h4>{p['name']}</h4>
+<h3>{p['name']}</h3>
 
-<p>Brand: {p['brand']}</p>
-<p>Model: {p['model']}</p>
-<p>Part No: {p['part']}</p>
+Brand: {p['brand']}<br>
+Model: {p['model']}<br>
+Part: {p['part']}<br>
 
-<p>⭐ {p['rating']}</p>
+Price: ₹{p['price']}<br>
 
-<h3>₹{p['price']}</h3>
-
-<a href="/add/{p['id']}"><button>Add to Cart</button></a>
-
-<a href="/review/{p['id']}"><button>Review</button></a>
-
-</div>
+<a href="/add/{p['id']}">Add to Cart</a>
 
 """
 
-    html+="</div>"
-
     return html
 
-# -------------------------
-# CART
-# -------------------------
+
+# ---------------- CART ----------------
 
 @app.route("/add/<int:id>")
 def add(id):
@@ -190,11 +96,12 @@ def add(id):
 
     return redirect("/cart")
 
+
 @app.route("/cart",methods=["GET","POST"])
-def view_cart():
+def cart_page():
 
     total=0
-    html="<h1>Cart</h1>"
+    html="<h2>Cart</h2>"
 
     for c in cart:
 
@@ -203,8 +110,11 @@ def view_cart():
 
     if request.method=="POST":
 
+        order_id=len(orders)+1
+
         orders.append({
 
+        "id":order_id,
         "name":request.form["name"],
         "phone":request.form["phone"],
         "address":request.form["address"],
@@ -213,11 +123,11 @@ def view_cart():
 
         })
 
-        return "Order placed successfully"
+        return f"Order placed successfully. Your Order ID: {order_id}"
 
     html+=f"""
 
-<h2>Total ₹{total}</h2>
+<h3>Total ₹{total}</h3>
 
 <form method="post">
 
@@ -230,11 +140,14 @@ Phone<br>
 Address<br>
 <textarea name="address"></textarea><br>
 
-Payment<br>
+Payment Method<br>
 
 <select name="payment">
+
 <option>UPI</option>
 <option>Cash on Delivery</option>
+<option>Card</option>
+
 </select>
 
 <button>Place Order</button>
@@ -243,21 +156,10 @@ Payment<br>
 
 """
 
-    html+=f"""
-
-<h3>UPI Payment</h3>
-
-<a href="upi://pay?pa=9864126916@upi&pn=AsianMotors&am={total}&cu=INR">
-Pay via UPI
-</a>
-
-"""
-
     return html
 
-# -------------------------
-# CUSTOMER LOGIN
-# -------------------------
+
+# ---------------- LOGIN ----------------
 
 @app.route("/login",methods=["GET","POST"])
 def login():
@@ -265,7 +167,10 @@ def login():
     if request.method=="POST":
 
         users.append({
-        "email":request.form["email"]
+
+        "name":request.form["name"],
+        "phone":request.form["phone"]
+
         })
 
         return redirect("/")
@@ -276,8 +181,11 @@ def login():
 
 <form method="post">
 
-Email<br>
-<input name="email"><br>
+Name<br>
+<input name="name"><br>
+
+Phone<br>
+<input name="phone"><br>
 
 <button>Login</button>
 
@@ -285,59 +193,167 @@ Email<br>
 
 """
 
-# -------------------------
-# REVIEW SYSTEM
-# -------------------------
 
-@app.route("/review/<int:id>",methods=["GET","POST"])
-def review(id):
+# ---------------- DELIVERY TRACKING ----------------
+
+@app.route("/track",methods=["GET","POST"])
+def track():
 
     if request.method=="POST":
 
-        reviews.append({
-        "product":id,
-        "text":request.form["text"]
-        })
+        oid=int(request.form["id"])
 
-        return "Review submitted"
+        for o in orders:
+
+            if o["id"]==oid:
+
+                return f"""
+
+Order ID: {o['id']}<br>
+Status: {o['status']} 🚚
+
+"""
+
+        return "Order not found"
 
     return """
 
-<h2>Write Review</h2>
+<h2>Track Delivery</h2>
 
 <form method="post">
 
-<textarea name="text"></textarea>
+Order ID<br>
+<input name="id"><br>
 
-<button>Submit</button>
+<button>Track</button>
 
 </form>
 
 """
 
-# -------------------------
-# ADMIN PANEL
-# -------------------------
 
-@app.route("/admin",methods=["GET","POST"])
-def admin():
+# ---------------- SETTINGS ----------------
+
+@app.route("/settings",methods=["GET","POST"])
+def settings():
+
+    global theme
+    global language
+
+    if request.method=="POST":
+
+        theme=request.form["theme"]
+        language=request.form["language"]
+
+        return "Settings updated"
+
+    return f"""
+
+<h2>Settings</h2>
+
+<form method="post">
+
+Theme<br>
+
+<select name="theme">
+
+<option>light</option>
+<option>dark</option>
+
+</select>
+
+Language<br>
+
+<select name="language">
+
+<option>English</option>
+<option>Hindi</option>
+
+</select>
+
+<button>Save</button>
+
+</form>
+
+"""
+
+
+# ---------------- SERVICE ----------------
+
+@app.route("/service",methods=["GET","POST"])
+def service():
+
+    if request.method=="POST":
+
+        services.append({
+
+        "name":request.form["name"],
+        "phone":request.form["phone"],
+        "car":request.form["car"],
+        "service":request.form["service"]
+
+        })
+
+        return "Service booked"
+
+    return """
+
+<h2>Mechanic Service Booking</h2>
+
+<form method="post">
+
+Name<br>
+<input name="name"><br>
+
+Phone<br>
+<input name="phone"><br>
+
+Car Model<br>
+<input name="car"><br>
+
+Service<br>
+
+<select name="service">
+
+<option>General Service</option>
+<option>Engine Repair</option>
+<option>Brake Repair</option>
+
+</select>
+
+<button>Book Service</button>
+
+</form>
+
+"""
+
+
+# ---------------- ADMIN DASHBOARD ----------------
+
+@app.route("/dashboard",methods=["GET","POST"])
+def dashboard():
 
     if request.method=="POST":
 
         if request.form["user"]==ADMIN_USER and request.form["pass"]==ADMIN_PASS:
 
-            html="<h1>Admin Panel</h1>"
+            html="<h1>Admin Dashboard</h1>"
 
             html+=f"Total Orders: {len(orders)}<br>"
-            html+=f"Total Users: {len(users)}<br>"
+            html+=f"Customers: {len(users)}<br>"
+            html+=f"Service Bookings: {len(services)}<br>"
 
             html+="<h3>Orders</h3>"
 
             for o in orders:
 
-                html+=f"{o['name']} | {o['address']} | {o['payment']} | {o['status']}<br>"
+                html+=f"{o['id']} | {o['name']} | {o['status']}<br>"
 
             return html
+
+        else:
+
+            return "Wrong password"
 
     return """
 
@@ -348,7 +364,7 @@ def admin():
 User<br>
 <input name="user"><br>
 
-Pass<br>
+Password<br>
 <input name="pass"><br>
 
 <button>Login</button>
@@ -357,27 +373,7 @@ Pass<br>
 
 """
 
-# -------------------------
-# SALES DASHBOARD
-# -------------------------
-
-@app.route("/dashboard")
-def dashboard():
-
-    revenue=sum([p["price"] for p in cart])
-
-    return f"""
-
-<h1>Sales Dashboard</h1>
-
-Total Products: {len(products)}<br>
-Orders: {len(orders)}<br>
-Users: {len(users)}<br>
-Revenue: ₹{revenue}<br>
-
-"""
-
-# -------------------------
 
 if __name__=="__main__":
+
     app.run(host="0.0.0.0",port=10000)
