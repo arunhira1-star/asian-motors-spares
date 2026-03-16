@@ -3,89 +3,149 @@ import random
 
 app = Flask(__name__)
 
+# -----------------------
+# ADMIN
+# -----------------------
+
 ADMIN_USER="admin"
 ADMIN_PASS="AMS986412"
 
+# -----------------------
+# PRODUCTS DATABASE
+# -----------------------
+
 products=[]
+
 brands=["Maruti","Hyundai","Tata","Mahindra","Jeep"]
 models=["Swift","Baleno","i20","Nexon","Compass"]
+
+categories=[
+"Engine","Brake","Electrical",
+"Suspension","Filter","Body"
+]
 
 for i in range(1,301):
 
     products.append({
 
     "id":i,
-    "name":f"Car Spare Part {i}",
+    "name":f"Auto Part {i}",
     "brand":random.choice(brands),
     "model":random.choice(models),
+    "category":random.choice(categories),
     "part":f"OEM{i}",
-    "price":random.randint(500,5000)
+    "price":random.randint(500,5000),
+    "supplier":"Default Supplier",
+    "commission":10
 
     })
 
 cart=[]
 orders=[]
-users=[]
-services=[]
+reviews=[]
+suppliers=[]
 
-theme="light"
-language="English"
-
-# ---------------- STORE ----------------
+# -----------------------
+# STORE
+# -----------------------
 
 @app.route("/")
 def store():
 
-    html=f"""
+    search=request.args.get("search","")
+    brand=request.args.get("brand","")
+    category=request.args.get("category","")
+    price=request.args.get("price","")
+
+    html="""
 
 <h1>🚗 Asian Motors Spares</h1>
 
 <a href="/cart">Cart</a> |
-<a href="/login">Customer Login</a> |
-<a href="/settings">Settings</a> |
+<a href="/upload">Upload Part Photo</a> |
 <a href="/track">Track Order</a> |
-<a href="/dashboard">Admin</a>
+<a href="/supplier">Supplier</a>
 
 <br><br>
 
 <form>
 
-Search Part
+Search
 <input name="search">
+
+Brand
+<select name="brand">
+<option value="">All</option>
+<option>Maruti</option>
+<option>Hyundai</option>
+<option>Tata</option>
+<option>Mahindra</option>
+<option>Jeep</option>
+</select>
+
+Category
+<select name="category">
+<option value="">All</option>
+<option>Engine</option>
+<option>Brake</option>
+<option>Electrical</option>
+<option>Suspension</option>
+<option>Filter</option>
+<option>Body</option>
+</select>
+
+Max Price
+<input name="price">
 
 <button>Search</button>
 
 </form>
 
-"""
+<hr>
 
-    search=request.args.get("search","")
+"""
 
     for p in products:
 
-        if search and search not in p["part"]:
+        if search and search.lower() not in p["name"].lower() and search not in p["part"]:
+            continue
+
+        if brand and brand!=p["brand"]:
+            continue
+
+        if category and category!=p["category"]:
+            continue
+
+        if price and p["price"]>int(price):
             continue
 
         html+=f"""
 
-<hr>
-
 <h3>{p['name']}</h3>
 
 Brand: {p['brand']}<br>
-Model: {p['model']}<br>
-Part: {p['part']}<br>
+Category: {p['category']}<br>
+
+Part No: {p['part']}<br>
 
 Price: ₹{p['price']}<br>
 
+Supplier: {p['supplier']}<br>
+
 <a href="/add/{p['id']}">Add to Cart</a>
+
+<a href="/review/{p['id']}">Review</a>
+
+<hr>
 
 """
 
     return html
 
 
-# ---------------- CART ----------------
+# -----------------------
+# CART
+# -----------------------
 
 @app.route("/add/<int:id>")
 def add(id):
@@ -101,6 +161,7 @@ def add(id):
 def cart_page():
 
     total=0
+
     html="<h2>Cart</h2>"
 
     for c in cart:
@@ -123,7 +184,7 @@ def cart_page():
 
         })
 
-        return f"Order placed successfully. Your Order ID: {order_id}"
+        return f"Order placed. Order ID: {order_id}"
 
     html+=f"""
 
@@ -140,14 +201,12 @@ Phone<br>
 Address<br>
 <textarea name="address"></textarea><br>
 
-Payment Method<br>
+Payment<br>
 
 <select name="payment">
-
 <option>UPI</option>
 <option>Cash on Delivery</option>
 <option>Card</option>
-
 </select>
 
 <button>Place Order</button>
@@ -159,42 +218,9 @@ Payment Method<br>
     return html
 
 
-# ---------------- LOGIN ----------------
-
-@app.route("/login",methods=["GET","POST"])
-def login():
-
-    if request.method=="POST":
-
-        users.append({
-
-        "name":request.form["name"],
-        "phone":request.form["phone"]
-
-        })
-
-        return redirect("/")
-
-    return """
-
-<h2>Customer Login</h2>
-
-<form method="post">
-
-Name<br>
-<input name="name"><br>
-
-Phone<br>
-<input name="phone"><br>
-
-<button>Login</button>
-
-</form>
-
-"""
-
-
-# ---------------- DELIVERY TRACKING ----------------
+# -----------------------
+# DELIVERY TRACKING
+# -----------------------
 
 @app.route("/track",methods=["GET","POST"])
 def track():
@@ -218,7 +244,7 @@ Status: {o['status']} 🚚
 
     return """
 
-<h2>Track Delivery</h2>
+<h2>Track Order</h2>
 
 <form method="post">
 
@@ -232,148 +258,122 @@ Order ID<br>
 """
 
 
-# ---------------- SETTINGS ----------------
+# -----------------------
+# REVIEW
+# -----------------------
 
-@app.route("/settings",methods=["GET","POST"])
-def settings():
-
-    global theme
-    global language
-
-    if request.method=="POST":
-
-        theme=request.form["theme"]
-        language=request.form["language"]
-
-        return "Settings updated"
-
-    return f"""
-
-<h2>Settings</h2>
-
-<form method="post">
-
-Theme<br>
-
-<select name="theme">
-
-<option>light</option>
-<option>dark</option>
-
-</select>
-
-Language<br>
-
-<select name="language">
-
-<option>English</option>
-<option>Hindi</option>
-
-</select>
-
-<button>Save</button>
-
-</form>
-
-"""
-
-
-# ---------------- SERVICE ----------------
-
-@app.route("/service",methods=["GET","POST"])
-def service():
+@app.route("/review/<int:id>",methods=["GET","POST"])
+def review(id):
 
     if request.method=="POST":
 
-        services.append({
+        reviews.append({
 
-        "name":request.form["name"],
-        "phone":request.form["phone"],
-        "car":request.form["car"],
-        "service":request.form["service"]
+        "product":id,
+        "text":request.form["text"]
 
         })
 
-        return "Service booked"
+        return "Review submitted"
 
     return """
 
-<h2>Mechanic Service Booking</h2>
+<h2>Write Review</h2>
 
 <form method="post">
 
-Name<br>
-<input name="name"><br>
+<textarea name="text"></textarea>
 
-Phone<br>
-<input name="phone"><br>
-
-Car Model<br>
-<input name="car"><br>
-
-Service<br>
-
-<select name="service">
-
-<option>General Service</option>
-<option>Engine Repair</option>
-<option>Brake Repair</option>
-
-</select>
-
-<button>Book Service</button>
+<button>Submit</button>
 
 </form>
 
 """
 
 
-# ---------------- ADMIN DASHBOARD ----------------
+# -----------------------
+# AI PART DETECTION DEMO
+# -----------------------
 
-@app.route("/dashboard",methods=["GET","POST"])
-def dashboard():
+@app.route("/upload",methods=["GET","POST"])
+def upload():
 
     if request.method=="POST":
 
-        if request.form["user"]==ADMIN_USER and request.form["pass"]==ADMIN_PASS:
+        return """
 
-            html="<h1>Admin Dashboard</h1>"
+Photo received.
 
-            html+=f"Total Orders: {len(orders)}<br>"
-            html+=f"Customers: {len(users)}<br>"
-            html+=f"Service Bookings: {len(services)}<br>"
+AI detection: Unknown part (demo)
 
-            html+="<h3>Orders</h3>"
+Please call us:
 
-            for o in orders:
+📞 9864126916
 
-                html+=f"{o['id']} | {o['name']} | {o['status']}<br>"
-
-            return html
-
-        else:
-
-            return "Wrong password"
+"""
 
     return """
 
-<h2>Admin Login</h2>
+<h2>Upload Part Photo</h2>
 
 <form method="post">
 
-User<br>
-<input name="user"><br>
+Image URL<br>
+<input name="photo"><br>
 
-Password<br>
-<input name="pass"><br>
-
-<button>Login</button>
+<button>Upload</button>
 
 </form>
 
 """
 
 
-if __name__=="__main__":
+# -----------------------
+# SUPPLIER MARKETPLACE
+# -----------------------
 
+@app.route("/supplier",methods=["GET","POST"])
+def supplier():
+
+    if request.method=="POST":
+
+        suppliers.append({
+
+        "name":request.form["name"],
+        "commission":request.form["commission"]
+
+        })
+
+        return "Supplier added"
+
+    html="""
+
+<h2>Supplier Marketplace</h2>
+
+<form method="post">
+
+Supplier Name<br>
+<input name="name"><br>
+
+Commission %<br>
+<input name="commission"><br>
+
+<button>Add Supplier</button>
+
+</form>
+
+<h3>Suppliers</h3>
+
+"""
+
+    for s in suppliers:
+
+        html+=f"{s['name']} Commission: {s['commission']}%<br>"
+
+    return html
+
+
+# -----------------------
+
+if __name__=="__main__":
     app.run(host="0.0.0.0",port=10000)
