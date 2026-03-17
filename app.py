@@ -1,156 +1,167 @@
-from flask import Flask,request,redirect
+from flask import Flask, request, redirect
 import random
 
 app = Flask(__name__)
 
-# -----------------------
-# ADMIN
-# -----------------------
-
-ADMIN_USER="admin"
-ADMIN_PASS="AMS986412"
-
-# -----------------------
-# PRODUCTS DATABASE
-# -----------------------
+# -----------------
+# PRODUCTS 10000+
+# -----------------
 
 products=[]
-
 brands=["Maruti","Hyundai","Tata","Mahindra","Jeep"]
-models=["Swift","Baleno","i20","Nexon","Compass"]
 
-categories=[
-"Engine","Brake","Electrical",
-"Suspension","Filter","Body"
-]
-
-for i in range(1,301):
+for i in range(1,10001):
 
     products.append({
 
     "id":i,
-    "name":f"Auto Part {i}",
+    "name":f"Car Spare Part {i}",
     "brand":random.choice(brands),
-    "model":random.choice(models),
-    "category":random.choice(categories),
     "part":f"OEM{i}",
-    "price":random.randint(500,5000),
-    "supplier":"Default Supplier",
-    "commission":10
+    "price":random.randint(500,5000)
 
     })
 
 cart=[]
 orders=[]
-reviews=[]
-suppliers=[]
+services=[]
+users=[]
 
-# -----------------------
-# STORE
-# -----------------------
+# -----------------
+# LOGO (BASE64 IMAGE)
+# -----------------
+
+logo_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+
+
+# -----------------
+# HOME PAGE
+# -----------------
 
 @app.route("/")
-def store():
+def home():
 
     search=request.args.get("search","")
-    brand=request.args.get("brand","")
-    category=request.args.get("category","")
-    price=request.args.get("price","")
 
-    html="""
+    html=f"""
 
-<h1>🚗 Asian Motors Spares</h1>
+<style>
 
-<a href="/cart">Cart</a> |
-<a href="/upload">Upload Part Photo</a> |
-<a href="/track">Track Order</a> |
-<a href="/supplier">Supplier</a>
+body{{font-family:Arial;margin:0;background:#f1f3f6}}
 
-<br><br>
+header{{
+background:#2874f0;
+padding:15px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+color:white
+}}
+
+.logo{{height:60px}}
+
+.search{{padding:8px;width:400px}}
+
+.products{{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:20px;
+padding:20px
+}}
+
+.card{{
+background:white;
+padding:10px;
+border-radius:6px;
+box-shadow:0 0 5px gray
+}}
+
+button{{
+background:#fb641b;
+color:white;
+border:none;
+padding:8px;
+}}
+
+</style>
+
+<header>
+
+<div style="display:flex;align-items:center">
+
+<img src="{logo_data}" class="logo">
+
+<h2 style="margin-left:10px">Asian Motors Spares</h2>
+
+</div>
 
 <form>
 
-Search
-<input name="search">
-
-Brand
-<select name="brand">
-<option value="">All</option>
-<option>Maruti</option>
-<option>Hyundai</option>
-<option>Tata</option>
-<option>Mahindra</option>
-<option>Jeep</option>
-</select>
-
-Category
-<select name="category">
-<option value="">All</option>
-<option>Engine</option>
-<option>Brake</option>
-<option>Electrical</option>
-<option>Suspension</option>
-<option>Filter</option>
-<option>Body</option>
-</select>
-
-Max Price
-<input name="price">
-
-<button>Search</button>
+<input name="search" class="search" placeholder="Search car parts">
 
 </form>
 
-<hr>
+<div>
+
+<a href="/account">My Account</a> |
+<a href="/cart">Cart</a> |
+<a href="/settings">Settings</a>
+
+</div>
+
+</header>
+
+<h2 style="padding:20px">
+
+Welcome to our store (Asian Motors Spares)
+
+</h2>
+
+<div class="products">
 
 """
 
-    for p in products:
+    for p in products[:80]:
 
-        if search and search.lower() not in p["name"].lower() and search not in p["part"]:
-            continue
-
-        if brand and brand!=p["brand"]:
-            continue
-
-        if category and category!=p["category"]:
-            continue
-
-        if price and p["price"]>int(price):
+        if search and search not in p["part"]:
             continue
 
         html+=f"""
 
-<h3>{p['name']}</h3>
+<div class="card">
+
+<h4>{p['name']}</h4>
 
 Brand: {p['brand']}<br>
-Category: {p['category']}<br>
 
-Part No: {p['part']}<br>
+Part: {p['part']}<br>
 
-Price: ₹{p['price']}<br>
+<h3>₹{p['price']}</h3>
 
-Supplier: {p['supplier']}<br>
+<a href="/add/{p['id']}">
 
-<a href="/add/{p['id']}">Add to Cart</a>
+<button>Add to Cart</button>
 
-<a href="/review/{p['id']}">Review</a>
+</a>
 
-<hr>
+</div>
 
 """
+
+    html+="</div>"
 
     return html
 
 
-# -----------------------
+# -----------------
 # CART
-# -----------------------
+# -----------------
 
 @app.route("/add/<int:id>")
 def add(id):
 
     for p in products:
+
         if p["id"]==id:
             cart.append(p)
 
@@ -161,7 +172,6 @@ def add(id):
 def cart_page():
 
     total=0
-
     html="<h2>Cart</h2>"
 
     for c in cart:
@@ -171,20 +181,16 @@ def cart_page():
 
     if request.method=="POST":
 
-        order_id=len(orders)+1
+        oid=len(orders)+1
 
         orders.append({
 
-        "id":order_id,
-        "name":request.form["name"],
-        "phone":request.form["phone"],
-        "address":request.form["address"],
-        "payment":request.form["payment"],
-        "status":"Processing"
+        "id":oid,
+        "status":"Shipped"
 
         })
 
-        return f"Order placed. Order ID: {order_id}"
+        return f"Order placed. Order ID {oid}"
 
     html+=f"""
 
@@ -195,19 +201,8 @@ def cart_page():
 Name<br>
 <input name="name"><br>
 
-Phone<br>
-<input name="phone"><br>
-
 Address<br>
 <textarea name="address"></textarea><br>
-
-Payment<br>
-
-<select name="payment">
-<option>UPI</option>
-<option>Cash on Delivery</option>
-<option>Card</option>
-</select>
 
 <button>Place Order</button>
 
@@ -218,9 +213,46 @@ Payment<br>
     return html
 
 
-# -----------------------
+# -----------------
+# ACCOUNT
+# -----------------
+
+@app.route("/account",methods=["GET","POST"])
+def account():
+
+    if request.method=="POST":
+
+        users.append({
+
+        "name":request.form["name"],
+        "phone":request.form["phone"]
+
+        })
+
+        return redirect("/")
+
+    return """
+
+<h2>My Account</h2>
+
+<form method="post">
+
+Name<br>
+<input name="name"><br>
+
+Phone<br>
+<input name="phone"><br>
+
+<button>Save</button>
+
+</form>
+
+"""
+
+
+# -----------------
 # DELIVERY TRACKING
-# -----------------------
+# -----------------
 
 @app.route("/track",methods=["GET","POST"])
 def track():
@@ -233,10 +265,15 @@ def track():
 
             if o["id"]==oid:
 
-                return f"""
+                return """
 
-Order ID: {o['id']}<br>
-Status: {o['status']} 🚚
+<h2>Order Tracking</h2>
+
+Order Placed ✔<br>
+Packed ✔<br>
+Shipped 🚚<br>
+Out for Delivery<br>
+Delivered
 
 """
 
@@ -258,122 +295,45 @@ Order ID<br>
 """
 
 
-# -----------------------
-# REVIEW
-# -----------------------
+# -----------------
+# MECHANIC BOOKING
+# -----------------
 
-@app.route("/review/<int:id>",methods=["GET","POST"])
-def review(id):
-
-    if request.method=="POST":
-
-        reviews.append({
-
-        "product":id,
-        "text":request.form["text"]
-
-        })
-
-        return "Review submitted"
-
-    return """
-
-<h2>Write Review</h2>
-
-<form method="post">
-
-<textarea name="text"></textarea>
-
-<button>Submit</button>
-
-</form>
-
-"""
-
-
-# -----------------------
-# AI PART DETECTION DEMO
-# -----------------------
-
-@app.route("/upload",methods=["GET","POST"])
-def upload():
+@app.route("/mechanic",methods=["GET","POST"])
+def mechanic():
 
     if request.method=="POST":
 
-        return """
-
-Photo received.
-
-AI detection: Unknown part (demo)
-
-Please call us:
-
-📞 9864126916
-
-"""
-
-    return """
-
-<h2>Upload Part Photo</h2>
-
-<form method="post">
-
-Image URL<br>
-<input name="photo"><br>
-
-<button>Upload</button>
-
-</form>
-
-"""
-
-
-# -----------------------
-# SUPPLIER MARKETPLACE
-# -----------------------
-
-@app.route("/supplier",methods=["GET","POST"])
-def supplier():
-
-    if request.method=="POST":
-
-        suppliers.append({
+        services.append({
 
         "name":request.form["name"],
-        "commission":request.form["commission"]
+        "car":request.form["car"]
 
         })
 
-        return "Supplier added"
+        return "Mechanic booked"
 
-    html="""
+    return """
 
-<h2>Supplier Marketplace</h2>
+<h2>Mechanic Service Booking</h2>
 
 <form method="post">
 
-Supplier Name<br>
+Name<br>
 <input name="name"><br>
 
-Commission %<br>
-<input name="commission"><br>
+Car Model<br>
+<input name="car"><br>
 
-<button>Add Supplier</button>
+<button>Book</button>
 
 </form>
 
-<h3>Suppliers</h3>
-
 """
 
-    for s in suppliers:
 
-        html+=f"{s['name']} Commission: {s['commission']}%<br>"
-
-    return html
-
-
-# -----------------------
+# -----------------
 
 if __name__=="__main__":
+
     app.run(host="0.0.0.0",port=10000)
